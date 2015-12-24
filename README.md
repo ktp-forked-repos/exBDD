@@ -1,6 +1,6 @@
 # ExBDD
 
-**TODO: Add description**
+Binary Decision Diagrams for Elixir
 
 ## Installation
 
