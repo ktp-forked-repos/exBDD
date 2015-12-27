@@ -32,8 +32,6 @@ defmodule ExBDD do
     case {f, g, h} do
       {@l, ^g, ^h} -> g
       {@o, ^g, ^h} -> h
-      {@l, ^g, ^h} -> g
-      {@o, ^g, ^h} -> h
       {^f, ^g, ^g} -> g
       {^f, @l, @o} -> f
       {^f, @o, @l} -> nf
