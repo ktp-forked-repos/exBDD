@@ -169,11 +169,14 @@ defmodule ExBDD do
   def build_ite(base, f, g, h) do
     if (res = get_memo base, f, g, h) != nil do res
     else
-      vars = for n <- [f,g,h] do get_var base, n end
-      if_ = Enum.min(for v <- vars, v > 0, do: v)
-      th_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
-      el_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenLo(base, if_, n) end]
-      if th_ == el_ do th_ else get_nid base, if_, th_, el_ end
+      (Task.async fn ->
+        vars = for n <- [f,g,h] do get_var base, n end
+        if_ = Enum.min(for v <- vars, v > 0, do: v)
+        th_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
+        el_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenLo(base, if_, n) end]
+        if th_ == el_ do th_ else get_nid base, if_, th_, el_ end
+      end)
+      |> Task.await
     end
   end
 
