@@ -46,7 +46,7 @@ defmodule ExBDD do
     Agent.get base, fn %{names: names} -> names[name] end
   end
 
-  @spec new_var(base, String.t) :: nid | nil
+  @spec new_var(base, String.t) :: nid
   @doc "create a new node and bind the name to it"
   def new_var(base, name) do
     Agent.get_and_update base, fn state ->
@@ -105,7 +105,7 @@ defmodule ExBDD do
   @doc "return the nid for the variable or function on which node n branches"
   def get_var(base, n) do
     cond do
-      n < 0 -> bnot (get_var base, (bnot n))
+      n < 0 -> get_var base, (bnot n)
       n == @o -> @l
       true -> {f, _g, _h} = (node base, n); f
     end
