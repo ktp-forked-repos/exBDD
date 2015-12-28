@@ -72,12 +72,20 @@ defmodule ExBDD do
   end
 
   @spec bAND(base, nid, nid) :: nid
-  @doc "perform a logical AND operation on BDD nids"
+  @doc "perform a logical AND operation on BDD nodes"
   def bAND(base, a, b), do: ite base, a, b, @o
 
   @spec bNAND(base, nid, nid) :: nid
-  @doc "perform a logical NAND operation on BDD nids"
+  @doc "perform a logical NAND operation on BDD nodes"
   def bNAND(base, a, b), do: bnot(ite base, a, b, @o)
+
+  @spec bOR(base, nid, nid) :: nid
+  @doc "perform a logical OR operation on BDD nodes"
+  def bOR(base, a, b), do: ite base, a, @l, b
+
+  @spec bXOR(base, nid, nid) :: nid
+  @doc "perform a logical XOR operation on BDD nodes"
+  def bXOR(base, a, b), do: ite base, a, (bnot b), b
 
 
   @spec get_memo(base, nid, nid, nid) :: nid | nil

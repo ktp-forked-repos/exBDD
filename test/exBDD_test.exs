@@ -44,4 +44,22 @@ defmodule ExBDDTest do
     assert (ExBDD.whenHi base, b, f) == bnot a
   end
 
+  test "bOR", %{base: base} do
+    [a, b] = ExBDD.vars base, ["a", "b"]
+    f = ExBDD.bOR base, a, b
+    assert (ExBDD.whenLo base, a, f) == b
+    assert (ExBDD.whenHi base, a, f) == @l
+    assert (ExBDD.whenLo base, b, f) == a
+    assert (ExBDD.whenHi base, b, f) == @l
+  end
+
+  test "bXOR", %{base: base} do
+    [a, b] = ExBDD.vars base, ["a", "b"]
+    f = ExBDD.bXOR base, a, b
+    assert (ExBDD.whenLo base, a, f) == b
+    assert (ExBDD.whenHi base, a, f) == bnot b
+    assert (ExBDD.whenLo base, b, f) == a
+    assert (ExBDD.whenHi base, b, f) == bnot a
+  end
+
 end
