@@ -16,6 +16,9 @@ defmodule ExBDD do
   @typdoc "node identifier"
   @type nid :: number
 
+  @typdoc "nid for a variable"
+  @type var :: nid
+
   @typdoc "if/then/else triple"
   @type bdd :: {nid, nid, nid}
 
@@ -26,15 +29,14 @@ defmodule ExBDD do
   @doc "create a new BDD base"
   def init do
     Agent.start_link fn ->
-      %{ nodes: %{ 0 => { @l, @o, @l } },
-         names: %{ },
-         memos: %{ },
-         next_nid: 1,
-       }
+      %{nodes: %{ 0 => { @l, @o, @l } },
+        names: %{ },
+        memos: %{ },
+        next_nid: 1 }
     end
   end
 
-  @spec vars(base, [String.t]) :: [nid]
+  @spec vars(base, [String.t]) :: [var]
   @doc "retrieve the nids for the given variables (creating new nodes when necessary)"
   def vars(base, names) do
     for v <- names do by_name(base, v) || new_var(base, v) end
@@ -46,7 +48,7 @@ defmodule ExBDD do
     Agent.get base, fn %{names: names} -> names[name] end
   end
 
-  @spec new_var(base, String.t) :: nid
+  @spec new_var(base, String.t) :: var
   @doc "create a new node and bind the name to it"
   def new_var(base, name) do
     Agent.get_and_update base, fn state ->
@@ -101,7 +103,7 @@ defmodule ExBDD do
     end
   end
 
-  @spec get_var(base, nid) :: nid
+  @spec get_var(base, nid) :: var
   @doc "return the nid for the variable or function on which node n branches"
   def get_var(base, n) do
     cond do
@@ -169,35 +171,33 @@ defmodule ExBDD do
     else
       vars = for n <- [f,g,h] do get_var base, n end
       if_ = Enum.min(for v <- vars, v > 0, do: v)
-      [f1, g1, h1] = for n <- [f,g,h] do whenHi(base, if_, n) end
-      [f0, g0, h0] = for n <- [f,g,h] do whenLo(base, if_, n) end
-      th_ = ite base, f1, g1, h1
-      el_ = ite base, f0, g0, h0
+      th_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
+      el_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenLo(base, if_, n) end]
       if th_ == el_ do th_ else get_nid base, if_, th_, el_ end
     end
   end
 
-  @spec whenHi(base, nid, nid) :: nid
+  @spec whenHi(base, var, nid) :: nid
   @doc "return the value of the node when var is true"
   def whenHi(base, var, nid) do
     {v, hi, lo} = node base, nid
     cond do
       v == @l -> nid
-      var == v  -> hi
-      var <  v  -> nid
-      var >  v  -> ite base, v, (whenHi base, var, hi), (whenHi base, var, lo)
+      var == v -> hi
+      var < v -> nid
+      var > v -> ite base, v, (whenHi base, var, hi), (whenHi base, var, lo)
     end
   end
 
-  @spec whenHi(base, nid, nid) :: nid
+  @spec whenHi(base, var, nid) :: nid
   @doc "return the value of the node when var is false"
   def whenLo(base, var, nid) do
     {v, hi, lo} = node base, nid
     cond do
       v == @l -> nid
-      var == v  -> lo
-      var <  v  -> nid
-      var >  v  -> ite base, v, (whenLo base, var, hi), (whenLo base, var, lo)
+      var == v -> lo
+      var < v -> nid
+      var > v -> ite base, v, (whenLo base, var, hi), (whenLo base, var, lo)
     end
   end
 
