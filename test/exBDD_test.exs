@@ -9,7 +9,7 @@ defmodule ExBDDTest do
     {:ok, base} = ExBDD.init
     {:ok, base: base}
   end
-  
+
   test "variables", %{base: base} do
     [a, b] = ExBDD.vars base, ["a", "b"]
     assert [a, b] == [1, 2]
@@ -60,6 +60,20 @@ defmodule ExBDDTest do
     assert (ExBDD.whenHi base, a, f) == bnot b
     assert (ExBDD.whenLo base, b, f) == a
     assert (ExBDD.whenHi base, b, f) == bnot a
+  end
+
+  test "bMAJ", %{base: base} do
+    [a, b, c] = ExBDD.vars base, ["a", "b", "c"]
+    f = ExBDD.bMAJ base, a, b, c
+    g = ExBDD.bMAJ base, c, a, b
+    assert f == g
+
+    assert (ExBDD.whenLo base, a, f) == (ExBDD.bAND base, b, c)
+    assert (ExBDD.whenLo base, b, f) == (ExBDD.bAND base, a, c)
+    assert (ExBDD.whenLo base, c, f) == (ExBDD.bAND base, a, b)
+    assert (ExBDD.whenHi base, a, f) == (ExBDD.bOR base, b, c)
+    assert (ExBDD.whenHi base, b, f) == (ExBDD.bOR base, a, c)
+    assert (ExBDD.whenHi base, c, f) == (ExBDD.bOR base, a, b)
   end
 
 end

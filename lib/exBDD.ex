@@ -87,6 +87,13 @@ defmodule ExBDD do
   @doc "perform a logical XOR operation on BDD nodes"
   def bXOR(base, a, b), do: ite base, a, (bnot b), b
 
+  @spec bMAJ(base, nid, nid, nid) :: nid
+  @doc "perform a Majority operation on BDD nodes"
+  def bMAJ(base, a, b, c) do
+    [x, y, z] = Enum.sort_by [a, b, c], fn n -> get_var base, n end
+    ite(base, x, ite(base, y, @l, z),
+                 ite(base, y, z, @o))
+  end
 
   @spec get_memo(base, nid, nid, nid) :: nid | nil
   @doc "return the memoized nid for (ite f,g,h), if present"
