@@ -1,5 +1,5 @@
 defmodule ExBDD.Ints do
-  import ExBDD 
+  import ExBDD
 
   @typedoc "an array of bdds, corresponding to an integer."
   @type bdd_int :: [ExBDD.bdd]
@@ -18,9 +18,24 @@ defmodule ExBDD.Ints do
       ExBDD.new_var(base, (pre <> Integer.to_string(n)))
     end
     # then re-fetch them, grouped by prefix
-    for pre <- prefixes do 
+    for pre <- prefixes do
       ExBDD.vars base, (for n <- 1..nbits, do: (pre <> to_string n))
     end
   end
-  
+
+
+  @spec add(ExBDD.base, bdd_int, bdd_int) :: bdd_int
+  @doc "perform addition on the 'integers'"
+  def add(base, a, b) do
+    Enum.count(a) == Enum.count(b) || raise(ArgumentError, message: "a and b must be the same length")
+    pairs = (Enum.zip a, b) |> Enum.reverse # the pairs, from right to left
+    [c: _c, r: result] = Enum.reduce pairs, [c: 0, r: []], fn {x, y}, [c: c, r: r] ->
+      carry  = ExBDD.bMAJ(base, x, y, c)
+      result = ExBDD.bXOR base, x, (ExBDD.bXOR base, y, c)
+      [c: carry, r: [result|r]]
+    end
+    result
+  end
+
+
 end
