@@ -36,6 +36,13 @@ defmodule ExBDD do
     end
   end
 
+  @spec count(base) :: [nodes: number, memos: number]
+  def count(base) do
+    Agent.get base, fn state ->
+      [nodes: Enum.count(state[:nodes]), memos: Enum.count(state[:memos])]
+    end
+  end
+
   @spec vars(base, [String.t]) :: [var]
   @doc "retrieve the nids for the given variables (creating new nodes when necessary)"
   def vars(base, names) do
@@ -55,6 +62,7 @@ defmodule ExBDD do
       nid = state[:next_nid]
       {nid, %{state |
               nodes: Map.put(state[:nodes], nid, { nid, @l, @o }),
+              memos: Map.put(state[:memos], { nid, @l, @o }, nid),
               names: Map.put(state[:names], name, nid),
               next_nid: nid+1 }}
     end
@@ -102,6 +110,15 @@ defmodule ExBDD do
       Map.get(state[:memos], {f, g, h}, default)
     end
   end
+
+  @spec put_memo(base, bdd, nid) :: nid
+  def put_memo(base, fgh, nid) do
+    Agent.update base, fn state ->
+      %{state | memos: Map.put(state[:memos], fgh, nid)}
+    end
+    nid
+  end
+
 
   @spec get_nid(base, nid, nid, nid) :: nid
   @doc "find or create a nid for this triple."
@@ -184,14 +201,24 @@ defmodule ExBDD do
   def build_ite(base, f, g, h) do
     if (res = get_memo base, f, g, h) != nil do res
     else
-      (Task.async fn ->
-        vars = for n <- [f,g,h] do get_var base, n end
-        if_ = Enum.min(for v <- vars, v > 0, do: v)
-        th_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
-        el_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenLo(base, if_, n) end]
-        if th_ == el_ do th_ else get_nid base, if_, th_, el_ end
-      end)
-      |> (Task.await 10000000)
+      vars = for n <- [f,g,h] do get_var base, n end
+      if_ = Enum.min(for v <- vars, v > 0, do: v)
+
+      # consider spawning a new task:
+      spawn? = (:random.uniform(4) == 1)
+      if spawn? do
+        pc = :erlang.system_info(:process_count)
+        if (:random.uniform(1024)==1), do: IO.inspect [processes: pc] ++ count base
+      end
+      th_ = if spawn? do
+        Task.async ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
+      else
+        apply ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
+      end
+      el_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenLo(base, if_, n) end]
+      if spawn? do th_ = Task.await th_, ms = 100000000 end  # timeout in ms
+      result = if th_ == el_ do th_ else get_nid base, if_, th_, el_ end
+      put_memo base, {f, g, h}, result
     end
   end
 
