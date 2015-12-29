@@ -191,7 +191,7 @@ defmodule ExBDD do
         el_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenLo(base, if_, n) end]
         if th_ == el_ do th_ else get_nid base, if_, th_, el_ end
       end)
-      |> Task.await
+      |> (Task.await 10000000)
     end
   end
 

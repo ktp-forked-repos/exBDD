@@ -29,10 +29,11 @@ defmodule ExBDD.Ints do
   def add(base, a, b) do
     Enum.count(a) == Enum.count(b) || raise(ArgumentError, message: "a and b must be the same length")
     pairs = (Enum.zip a, b) |> Enum.reverse # the pairs, from right to left
-    [c: _c, r: result] = Enum.reduce pairs, [c: 0, r: []], fn {x, y}, [c: c, r: r] ->
+    [i: _i, c: _c, r: result] = Enum.reduce pairs, [i: 1, c: 0, r: []], fn {x, y}, [i: i, c: c, r: r] ->
+			IO.puts "  step #{i} of #{Enum.count a}..."
       carry  = ExBDD.bMAJ(base, x, y, c)
       result = ExBDD.bXOR base, x, (ExBDD.bXOR base, y, c)
-      [c: carry, r: [result|r]]
+      [i: i+1, c: carry, r: [result|r]]
     end
     result
   end
