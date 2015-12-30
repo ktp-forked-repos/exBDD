@@ -2,11 +2,12 @@ defmodule ExBDDTest do
   use ExUnit.Case
   doctest ExBDD
   import Bitwise
+  import ExBDD.Base
 
   @o 0; @l -1
 
   setup do
-    {:ok, base} = ExBDD.init
+    base = ExBDD.init
     {:ok, base: base}
   end
 
@@ -14,10 +15,10 @@ defmodule ExBDDTest do
     [a, b] = ExBDD.vars base, ["a", "b"]
     assert [a, b] == [1, 2]
     [na, nb] = [(bnot a), (bnot b)]
-    assert (ExBDD.get_bdd base, a) == { a, @l, @o }
-    assert (ExBDD.get_bdd base, b) == { b, @l, @o }
-    assert (ExBDD.get_bdd base, na) == { a, @o, @l }
-    assert (ExBDD.get_bdd base, nb) == { b, @o, @l }
+    assert (get_bdd base, a) == { a, @l, @o }
+    assert (get_bdd base, b) == { b, @l, @o }
+    assert (get_bdd base, na) == { a, @o, @l }
+    assert (get_bdd base, nb) == { b, @o, @l }
   end
 
 
@@ -26,7 +27,7 @@ defmodule ExBDDTest do
     f = ExBDD.bAND base, a, b
     g = ExBDD.bAND base, b, a
     assert f == g
-    assert (ExBDD.get_bdd base, f) == { a, b, @o }
+    assert (get_bdd base, f) == { a, b, @o }
     assert (ExBDD.whenHi base, a, f) == b
     assert (ExBDD.whenLo base, a, f) == @o
     assert (ExBDD.whenHi base, b, f) == a

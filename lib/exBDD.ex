@@ -8,6 +8,7 @@ defmodule ExBDD do
   by Karl S. Brace, Richard L. Rudell, and Randal E. Bryant.
   """
   import Bitwise
+  import ExBDD.Base
 
   # node 0 (@o) is the false node. instead of a 'true' node, we
   # just create a complement edge to the 'false' node. (@l = bnot @o)
@@ -23,60 +24,18 @@ defmodule ExBDD do
   @type bdd :: {nid, nid, nid}
 
   @typdoc "reference to BDD base"
-  @type base :: pid
+  @type base :: ExBDD.Base
 
   @spec init :: base
   @doc "create a new BDD base"
   def init do
-    Agent.start_link fn ->
-      %{nodes: %{ 0 => { @l, @o, @l } },
-        names: %{ },
-        memos: %{ },
-        next_nid: 1 }
-    end
-  end
-
-  @spec stats(base) :: [nodes: number, memos: number]
-  def stats(base) do
-    Agent.get base, fn state ->
-      [nodes: Enum.count(state[:nodes]), memos: Enum.count(state[:memos])]
-    end
+    ExBDD.RamCache.create
   end
 
   @spec vars(base, [String.t]) :: [var]
   @doc "retrieve the nids for the given variables (creating new nodes when necessary)"
   def vars(base, names) do
     for v <- names do by_name(base, v) || new_var(base, v) end
-  end
-
-  @spec by_name(base, String.t) :: nid | nil
-  @doc "retrieve the nids for the given name, if defined"
-  def by_name(base, name) do
-    Agent.get base, fn %{names: names} -> names[name] end
-  end
-
-  @spec new_var(base, String.t) :: var
-  @doc "create a new node and bind the name to it"
-  def new_var(base, name) do
-    Agent.get_and_update base, fn state ->
-      nid = state[:next_nid]
-      {nid, %{state |
-              nodes: Map.put(state[:nodes], nid, { nid, @l, @o }),
-              memos: Map.put(state[:memos], { nid, @l, @o }, nid),
-              names: Map.put(state[:names], name, nid),
-              next_nid: nid+1 }}
-    end
-  end
-
-  @spec get_bdd(base, nid) :: bdd
-  @doc "retrieve the if/then/else tuple for the given nid"
-  def get_bdd(base, nid) do
-    Agent.get base, fn state ->
-      invert = nid < 0
-      if invert do nid = bnot nid end
-      {f, g, h} = state[:nodes][nid]
-      if invert do {f, (bnot g), (bnot h)} else {f, g, h} end
-    end
   end
 
   @spec bAND(base, nid, nid) :: nid
@@ -101,38 +60,6 @@ defmodule ExBDD do
     [x, y, z] = Enum.sort_by [a, b, c], fn n -> get_var base, n end
     ite(base, x, ite(base, y, @l, z),
                  ite(base, y, z, @o))
-  end
-
-  @spec get_memo(base, nid, nid, nid) :: nid | nil
-  @doc "return the memoized nid for (ite f,g,h), if present"
-  def get_memo(base, f, g, h, default \\ nil ) do
-    Agent.get base, fn state ->
-      Map.get(state[:memos], {f, g, h}, default)
-    end
-  end
-
-  @spec put_memo(base, bdd, nid) :: nid
-  def put_memo(base, fgh, nid) do
-    Agent.update base, fn state ->
-      %{state | memos: Map.put(state[:memos], fgh, nid)}
-    end
-    nid
-  end
-
-
-  @spec get_nid(base, nid, nid, nid) :: nid
-  @doc "find or create a nid for this triple."
-  def get_nid(base, f, g, h) do
-    if (memo = get_memo base, f, g, h) != nil do memo
-    else
-      Agent.get_and_update base, fn state ->
-        nid = state[:next_nid]
-        {nid, %{state |
-                next_nid: nid + 1,
-                nodes: Map.put(state[:nodes], nid, {f,g,h}),
-                memos: Map.put(state[:memos], {f,g,h}, nid)}}
-      end
-    end
   end
 
   @spec get_var(base, nid) :: var
@@ -172,7 +99,7 @@ defmodule ExBDD do
           {@o, ^h} when hv < fv -> ite_norm base, nh, @o, nf  # (f?o:h) = (¬h?o:¬f)
           {^g,^ng} when gv < fv -> ite_norm base,  g,  f, nf  # (f?g:¬g) = (g?f:¬f)
           _ ->
-            # choose the representation with non-complemented edges in the 'if' and 'then' slots.
+            # choose the one with non-complemented edges in the 'if' and 'then' slots.
             # 0. (f ? g : h);  1. (¬f ? h : g);  2. ¬(f ? ¬g : ¬h)  3. ¬(¬f ? ¬h : ¬g)
             cond do
               f < 0 -> ite_norm base, nf, h, g
@@ -216,8 +143,8 @@ defmodule ExBDD do
         apply ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
       end
       el_ = apply ExBDD, :ite, [base | for n <- [f,g,h] do whenLo(base, if_, n) end]
-      if spawn? do th_ = Task.await th_, ms = 100000000 end  # timeout in ms
-      result = if th_ == el_ do th_ else get_nid base, if_, th_, el_ end
+      if spawn? do th_ = Task.await th_, 100000000 end  # timeout in ms
+      result = if th_ == el_ do th_ else get_nid base, {if_, th_, el_} end
       put_memo base, {f, g, h}, result
     end
   end
