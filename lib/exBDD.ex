@@ -36,8 +36,8 @@ defmodule ExBDD do
     end
   end
 
-  @spec count(base) :: [nodes: number, memos: number]
-  def count(base) do
+  @spec stats(base) :: [nodes: number, memos: number]
+  def stats(base) do
     Agent.get base, fn state ->
       [nodes: Enum.count(state[:nodes]), memos: Enum.count(state[:memos])]
     end
@@ -68,9 +68,9 @@ defmodule ExBDD do
     end
   end
 
-  @spec node(base, nid) :: bdd
+  @spec get_bdd(base, nid) :: bdd
   @doc "retrieve the if/then/else tuple for the given nid"
-  def node(base, nid) do
+  def get_bdd(base, nid) do
     Agent.get base, fn state ->
       invert = nid < 0
       if invert do nid = bnot nid end
@@ -141,7 +141,7 @@ defmodule ExBDD do
     cond do
       n < 0 -> get_var base, (bnot n)
       n == @o -> @l
-      true -> {f, _g, _h} = (node base, n); f
+      true -> {f, _g, _h} = (get_bdd base, n); f
     end
   end
 
@@ -208,7 +208,7 @@ defmodule ExBDD do
       spawn? = (:random.uniform(4) == 1)
       if spawn? do
         pc = :erlang.system_info(:process_count)
-        if (:random.uniform(1024)==1), do: IO.inspect [processes: pc] ++ count base
+        if (:random.uniform(1024)==1), do: IO.inspect [processes: pc] ++ stats base
       end
       th_ = if spawn? do
         Task.async ExBDD, :ite, [base | for n <- [f,g,h] do whenHi(base, if_, n) end]
@@ -225,7 +225,7 @@ defmodule ExBDD do
   @spec whenHi(base, var, nid) :: nid
   @doc "return the value of the node when var is true"
   def whenHi(base, var, nid) do
-    {v, hi, lo} = node base, nid
+    {v, hi, lo} = get_bdd base, nid
     cond do
       v == @l -> nid
       var == v -> hi
@@ -237,7 +237,7 @@ defmodule ExBDD do
   @spec whenHi(base, var, nid) :: nid
   @doc "return the value of the node when var is false"
   def whenLo(base, var, nid) do
-    {v, hi, lo} = node base, nid
+    {v, hi, lo} = get_bdd base, nid
     cond do
       v == @l -> nid
       var == v -> lo
