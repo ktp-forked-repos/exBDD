@@ -2,6 +2,15 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
+config :exredis,
+  host: "127.0.0.1",
+	port: 6379,
+	password: "",
+	db: 0,
+	reconnect: :no_reconnect,
+	max_queue: :infinity
+
+
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
 # file won't be loaded nor affect the parent project. For this reason,
