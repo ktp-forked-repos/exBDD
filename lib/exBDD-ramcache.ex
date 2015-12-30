@@ -6,7 +6,7 @@ defmodule ExBDD.RamCache do
 
   def create do
     {:ok, pid} = Agent.start_link fn ->
-      %{nodes: %{ 0 => { @l, @o, @l } },
+      %{nodes: %{ 0 => { @l, @o, @o } },
         names: %{ },
         memos: %{ },
         next_nid: 1}
