@@ -14,7 +14,7 @@ defmodule ExBDD.Ints do
   def make_ints(base, prefixes, nbits) do
     # first, make them in the interleaved order:
     for n <- 1..nbits, pre <- prefixes do
-      ExBDD.Base.new_var(base, (pre <> Integer.to_string(n)))
+      ExBDD.vars(base, [(pre <> Integer.to_string(n))])
     end
     # then re-fetch them, grouped by prefix
     for pre <- prefixes do
