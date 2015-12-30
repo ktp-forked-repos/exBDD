@@ -65,11 +65,12 @@ defmodule ExBDD do
   @spec get_var(base, nid) :: var
   @doc "return the nid for the variable or function on which node n branches"
   def get_var(base, n) do
-    cond do
+    v = cond do
       n < 0 -> get_var base, (bnot n)
       n == @o -> @l
       true -> {f, _g, _h} = (get_bdd base, n); f
     end
+    if v < @l do bnot v else v end
   end
 
   @spec ite_norm(base, nid, nid, nid) :: nid | bdd | %{not: bdd}
@@ -90,7 +91,7 @@ defmodule ExBDD do
       {^f, ^g,^nf} -> ite_norm base, f,  g, @l
       {^f,^nf, ^h} -> ite_norm base, f, @o,  h
       _ ->
-        # Choose between equivalent forms by putting the smaller variable in the 'if' slot.
+        # Choose between forms by putting the smaller variable in the 'if' slot.
         [fv, gv, hv] = for x <- [f, g, h] do get_var base, x end
         case {g, h} do
           {@l, ^h} when hv < fv -> ite_norm base,  h, @l,  f  # (f?l:g) = (g?l:f)
